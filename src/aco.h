@@ -10,6 +10,16 @@
 typedef struct {
     vector<int> path;
     vector<bool> visited;
+    double value;
+} Trip;
+
+typedef struct {
+    vector <Trip> trips;
+    double value;
+} Tour;
+
+typedef struct {
+    Tour tour;
     double solution_value;
 } Ant;
 

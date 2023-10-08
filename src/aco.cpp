@@ -77,13 +77,22 @@ void initializeAnts(Graph &g, vector<Ant> &ants, int n) {
     mt19937 gen(rd());
     uniform_int_distribution<int> dis(0, n - 1);
     for (int i = 0; i < ants.size(); i++) {
-        ants[i].visited.clear();
-        ants[i].visited.resize(n, false);
-        ants[i].path.clear();
+        ants[i].tour.trips.clear();
+        Trip d;
+        ants[i].tour.trips.resize(g.getD(), d);
+        for (int j = 0; j < g.getD(); j++) {
+            ants[i].tour.trips[j].visited.clear();
+            ants[i].tour.trips[j].path.clear();
+            ants[i].tour.trips[j].value = 0;
+        }
+        ants[i].tour.value = 0;
+        ants[i].tour.trips[0].path.push_back(0);
+        for (int j = 0; j < g.getD(); j++)
+            ants[i].tour.trips[j].visited.resize(g.getOrder(), false);
         int aleatory_number = dis(rd);
         Node *node = g.getNodeObjectId(aleatory_number);
-        ants[i].path.push_back(node->getId());
-        ants[i].visited[node->getObjectId()] = true;
+        ants[i].tour.trips[0].path.push_back(node->getId());
+        ants[i].tour.trips[0].visited[node->getObjectId()] = true;
         ants[i].solution_value = 0;
     }
 }
