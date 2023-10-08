@@ -91,9 +91,7 @@ int main(int argc, char **argv) {
 
     if (input_file.is_open())
         input_file.close();
-    int cycles = 20000;
-    if (g->getOrder() >= 50)
-        cycles = 70000;
+    int cycles = 2000;
 
     aco(*g, cycles, 0.7, 1, 9);
     delete g;

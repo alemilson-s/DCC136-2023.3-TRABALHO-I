@@ -16,7 +16,6 @@ void aco(Graph &g, int cycles, float evaporation, float alpha, float beta) {
     best.solution_value = numeric_limits<double>::max();
     vector<Ant> ants(n_ants, Ant());
     initializeParameters(ants, g, 10);
-    cycles = cycles / (n_ants * n_ants);
     int t = 0;
     bool h1 = false;
 
@@ -29,32 +28,34 @@ void aco(Graph &g, int cycles, float evaporation, float alpha, float beta) {
             int k = 0;
             tripTime = ants[j].inicialTime;
             while (k < g.getD()) {
-                if(k == g.getD() - 1)
+                if (k == g.getD() - 1)
                     h1 = true;
-                while(tripTime <= maxTripTime){
+                while (tripTime <= maxTripTime) {
                     Edge *next_node = selectNextNode(ants[j], g, alpha, beta, k, maxTripTime, tripTime, h1);
                     Node *node = g.getNode(next_node->getTargetId());
                     ants[j].tour.trips[k].path.push_back(node->getObjectId());
                     ants[j].tour.trips[k].visited[node->getObjectId()] = true;
                     ants[j].solution_value += node->getWeight();
                     tripTime += next_node->getWeight();
-                }    
+                    if (node->getType() == 'E')
+                        break;
+                }
                 tripTime = 0;
                 k++;
             }
             if (ants[j].solution_value < best.solution_value)
                 best = ants[j];
-//            cout << "Solução: " << best.solution_value << endl;
-//            cout << "Solução: " << ants[j].solution_value << endl;
+            cout << "Solução: " << best.solution_value << endl;
+            cout << "Solução: " << ants[j].solution_value << endl;
             j++;
         }
         for (j = 0; j < n_ants; j++) {
             for (int i = 0; i < ants[j].tour.trips.size(); i++) {
-                for(int k=0; k < ants[j].tour.trips[i].path.size() - 1; k++){
+                for (int k = 0; k < ants[j].tour.trips[i].path.size() - 1; k++) {
                     Node *node = g.getNode(ants[j].tour.trips[i].path[k]);
                     Edge *edge = node->getEdge(ants[j].tour.trips[i].path[k + 1]);
                     double pheromone = (1 - evaporation) * edge->getPheromone() +
-                                    evaporation * (1.0 / (g.getOrder() * ants[j].solution_value));
+                                       evaporation * (1.0 / (g.getOrder() * ants[j].solution_value));
                     edge->setPheromone(pheromone);
                     if (!g.getDirected()) {
                         node = g.getNode(ants[j].tour.trips[i].path[k + 1]);
@@ -64,7 +65,7 @@ void aco(Graph &g, int cycles, float evaporation, float alpha, float beta) {
                 }
             }
         }
-        for(int k = 0; k < best.tour.trips.size(); k++){
+        for (int k = 0; k < best.tour.trips.size(); k++) {
             for (int i = 0; i < best.tour.trips[k].path.size() - 1; i++) {
                 Node *node = g.getNode(best.tour.trips[k].path[i]);
                 Edge *edge = node->getEdge(best.tour.trips[k].path[i + 1]);
@@ -76,7 +77,7 @@ void aco(Graph &g, int cycles, float evaporation, float alpha, float beta) {
         t++;
     }
     cout << "Solução:" << endl;
-    for(int k = 0; k < best.tour.trips.size(); k++){
+    for (int k = 0; k < best.tour.trips.size(); k++) {
         for (int i = 0; i < best.tour.trips[k].path.size() - 1; i++) {
             cout << '\t' << '(' << best.tour.trips[k].path[i] << ", " << best.tour.trips[k].path[i + 1] << ')' << endl;
         }
@@ -87,7 +88,7 @@ void aco(Graph &g, int cycles, float evaporation, float alpha, float beta) {
 void initializeAnts(Graph &g, vector<Ant> &ants, int n) {
     random_device rd;
     mt19937 gen(rd());
-    uniform_int_distribution<int> dis(g.getH()+2, n - 1);
+    uniform_int_distribution<int> dis(g.getH() + 2, n - 1);
     for (int i = 0; i < ants.size(); i++) {
         ants[i].tour.trips.clear();
         Trip d;
@@ -97,19 +98,21 @@ void initializeAnts(Graph &g, vector<Ant> &ants, int n) {
             ants[i].tour.trips[j].path.clear();
         }
         ants[i].tour.trips[0].path.push_back(0);
-        ants[i].tour.trips[0].visited[0] = true;
-        for (int j = 0; j < g.getD(); j++){
+        for (int j = 0; j < g.getD(); j++) {
             ants[i].tour.trips[j].visited.resize(g.getOrder(), false);
             ants[i].tour.trips[j].visited[1] = true;
         }
-        
+        ants[i].tour.trips[0].visited[0] = true;
         int aleatory_number = dis(rd);
         Node *node = g.getNodeObjectId(aleatory_number);
         ants[i].tour.trips[0].path.push_back(node->getId());
         ants[i].tour.trips[0].visited[node->getObjectId()] = true;
         ants[i].solution_value = node->getWeight();
-        ants[i].inicialTime = sqrt((g.getNode(0)->getX() - g.getNode(aleatory_number)->getX()) * (g.getNode(0)->getX() - g.getNode(aleatory_number)->getX()) + (g.getNode(0)->getY() - g.getNode(aleatory_number)->getY()) * (g.getNode(0)->getY() - g.getNode(aleatory_number)->getY()));
-   }
+        ants[i].inicialTime = sqrt((g.getNode(0)->getX() - g.getNode(aleatory_number)->getX()) *
+                                   (g.getNode(0)->getX() - g.getNode(aleatory_number)->getX()) +
+                                   (g.getNode(0)->getY() - g.getNode(aleatory_number)->getY()) *
+                                   (g.getNode(0)->getY() - g.getNode(aleatory_number)->getY()));
+    }
 }
 
 void initializeParameters(vector<Ant> &ants, Graph &g, float pheromone) {
@@ -125,21 +128,26 @@ void initializeParameters(vector<Ant> &ants, Graph &g, float pheromone) {
     initializeAnts(g, ants, g.getOrder());
 }
 
-Edge *selectNextNode(Ant &ant, Graph &g, float alpha, float beta, int trip, float maxTripTime, float tripTime, bool h1) {
+Edge *
+selectNextNode(Ant &ant, Graph &g, float alpha, float beta, int trip, double maxTripTime, double tripTime, bool h1) {
     Edge *edges[g.getOrder()];
-    int n_edges = 0;
-    int current_node = ant.tour.trips[trip].path.back();
+    int n_edges = 0, current_node;
+    if (trip == 0)
+        current_node = ant.tour.trips[trip].path.back();
+    else
+        current_node = ant.tour.trips[trip - 1].path.back();
+
     Edge *edge = g.getNode(current_node)->getFirstEdge();
     double q = 0;
     vector<float> qualities;
-    float quality;  
+    float quality;
     Edge *hotelEdge;
 
     while (edge != nullptr) {
         Node *node = g.getNode(edge->getTargetId());
         if (!ant.tour.trips[trip].visited[node->getObjectId()]) {
-            quality = node->getWeight() / (edge->getWeight()+1);
-            qualities.push_back(quality); 
+            quality = node->getWeight() / (edge->getWeight() + 1);
+            qualities.push_back(quality);
             q += pow(edge->getPheromone(), alpha) * pow(quality, beta);
             edges[n_edges] = edge;
             n_edges++;
@@ -165,16 +173,19 @@ Edge *selectNextNode(Ant &ant, Graph &g, float alpha, float beta, int trip, floa
     for (int i = 0; i < probabilities.size(); i++) {
         t += p[i];
         if (t >= r) {
-            if(h1){
+            if (h1) {
                 Node *n1 = g.getNode(edges[i]->getTargetId());
                 Node *n2 = g.getNode(1);
                 hotelEdge = n1->getEdge(n2->getObjectId());
-            }
-            else{
+            } else {
                 hotelEdge = closestHotel(g, g.getNode(edges[i]->getTargetId()));
             }
-            distance = sqrt((g.getNode(hotelEdge->getTargetId())->getX() - g.getNode(edges[i]->getTargetId())->getX()) * (g.getNode(hotelEdge->getTargetId())->getX() - g.getNode(edges[i]->getTargetId())->getX()) + (g.getNode(hotelEdge->getTargetId())->getY() - g.getNode(edges[i]->getTargetId())->getY()) * (g.getNode(hotelEdge->getTargetId())->getY() - g.getNode(edges[i]->getTargetId())->getY()));
-            if(tripTime + edges[i] + distance < maxTripTime && g.getNode(edges[i]->getTargetId())->getType() == 'V'){
+            distance = sqrt((g.getNode(hotelEdge->getTargetId())->getX() - g.getNode(edges[i]->getTargetId())->getX()) *
+                            (g.getNode(hotelEdge->getTargetId())->getX() - g.getNode(edges[i]->getTargetId())->getX()) +
+                            (g.getNode(hotelEdge->getTargetId())->getY() - g.getNode(edges[i]->getTargetId())->getY()) *
+                            (g.getNode(hotelEdge->getTargetId())->getY() - g.getNode(edges[i]->getTargetId())->getY()));
+            if (tripTime + edges[i]->getWeight() + distance < maxTripTime &&
+                g.getNode(edges[i]->getTargetId())->getType() == 'V') {
                 return edges[i];
             }
         }
@@ -183,15 +194,16 @@ Edge *selectNextNode(Ant &ant, Graph &g, float alpha, float beta, int trip, floa
 }
 
 
-Edge *closestHotel(Graph &g, Node *current_node){
+Edge *closestHotel(Graph &g, Node *current_node) {
     Edge *edge = current_node->getFirstEdge();
     float closest = numeric_limits<float>::max();
     Edge *closestHotel;
     float distance;
-    while(edge != nullptr){
-        Node *node = g.getNode(edge->getTargetId()); 
-        distance = sqrt((current_node->getX() - node->getX()) * (current_node->getX() - node->getX()) + (current_node->getY() - node->getY()) * (current_node->getY() - node->getY()));
-        if(node->getType() == 'H' && distance < closest){
+    while (edge != nullptr) {
+        Node *node = g.getNode(edge->getTargetId());
+        distance = sqrt((current_node->getX() - node->getX()) * (current_node->getX() - node->getX()) +
+                        (current_node->getY() - node->getY()) * (current_node->getY() - node->getY()));
+        if (node->getType() == 'H' && distance < closest) {
             closest = distance;
             closestHotel = edge;
         }
