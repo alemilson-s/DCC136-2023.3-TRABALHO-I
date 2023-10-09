@@ -13,13 +13,13 @@ void aco(Graph &g, int cycles, float evaporation, float alpha, float beta) {
     cout << "Construindo solução ACO..." << endl;
     Ant best;
     int n_ants = g.getOrder() * 1 / 6;
-    best.solution_value = numeric_limits<double>::max();
+    best.solution_value = 0;
     vector<Ant> ants(n_ants, Ant());
     initializeParameters(ants, g, 10);
     int t = 0;
     bool h1 = false;
 
-    double maxTripTime = g.getTMax() / g.getD();
+    double maxTripTime;
     double tripTime;
     while (t < cycles) {
         initializeAnts(g, ants, g.getOrder()); 
@@ -28,6 +28,7 @@ void aco(Graph &g, int cycles, float evaporation, float alpha, float beta) {
             int k = 0;
             tripTime = ants[j].inicialTime;
             while (k < g.getD()) {
+                maxTripTime = g.getTD()[k];
                 if (k == g.getD() - 1)
                     h1 = true;
                 while (tripTime <= maxTripTime) {
@@ -37,6 +38,7 @@ void aco(Graph &g, int cycles, float evaporation, float alpha, float beta) {
                     ants[j].tour.trips[k].visited[node->getObjectId()] = true;
                     ants[j].solution_value += node->getWeight();
                     tripTime += next_node->getWeight();
+//                    tratar para tripTime não ultrapassar maxTripTime
                     if (node->getType() == 'E')
                         break;
                 }
@@ -194,7 +196,7 @@ selectNextNode(Ant &ant, Graph &g, float alpha, float beta, int trip, double max
             }
             distance = sqrt((g.getNode(hotelEdge->getTargetId())->getX() - g.getNode(edges[i]->getTargetId())->getX()) * (g.getNode(hotelEdge->getTargetId())->getX() - g.getNode(edges[i]->getTargetId())->getX()) + (g.getNode(hotelEdge->getTargetId())->getY() - g.getNode(edges[i]->getTargetId())->getY()) * (g.getNode(hotelEdge->getTargetId())->getY() - g.getNode(edges[i]->getTargetId())->getY()));
             // caso haja disponibilidade de tempo para ir ao próximo nó, e, dele, ir ao hotel mais próximo, então podemos ir ao nó
-            if(tripTime + edges[i] + distance < maxTripTime && g.getNode(edges[i]->getTargetId())->getType() == 'V'){
+            if(tripTime + edges[i]->getWeight() + distance < maxTripTime && g.getNode(edges[i]->getTargetId())->getType() == 'V'){
                 return edges[i];
             }
         }

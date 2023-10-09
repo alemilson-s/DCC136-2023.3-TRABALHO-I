@@ -20,7 +20,13 @@ private:
     int h;
     int d;
     float t_max;
-    Td t_d;
+    vector<double> t_d;
+public:
+    const vector<double> &getTD() const;
+
+    void setTD(const vector<double> &tD);
+
+private:
     int number_edges;
     bool directed;
     bool weighted_edge;
@@ -47,10 +53,6 @@ public:
     float getTMax() const;
 
     void setTMax(float tMax);
-
-    const Td &getTD() const;
-
-    void setTD(const Td &tD);
 
     Graph(int order, bool directed, bool weighted_edge, bool weighted_node);
 

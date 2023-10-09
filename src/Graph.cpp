@@ -376,11 +376,11 @@ void Graph::setTMax(float tMax) {
     t_max = tMax;
 }
 
-const Td &Graph::getTD() const {
+const vector<double> &Graph::getTD() const {
     return t_d;
 }
 
-void Graph::setTD(const Td &tD) {
+void Graph::setTD(const vector<double> &tD) {
     t_d = tD;
 }
 
