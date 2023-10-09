@@ -22,7 +22,7 @@ void aco(Graph &g, int cycles, float evaporation, float alpha, float beta) {
     double maxTripTime;
     double tripTime;
     while (t < cycles) {
-        initializeAnts(g, ants, g.getOrder()); 
+        initializeAnts(g, ants, g.getOrder());
         int j = 0;
         while (j < n_ants) {
             int k = 0;
@@ -63,7 +63,7 @@ void aco(Graph &g, int cycles, float evaporation, float alpha, float beta) {
                     Node *node = g.getNode(ants[j].tour.trips[i].path[k]);
                     Edge *edge = node->getEdge(ants[j].tour.trips[i].path[k + 1]);
                     double pheromone = (1 - evaporation) * edge->getPheromone() +
-                                    evaporation * ((g.getOrder() * ants[j].solution_value));
+                                       evaporation * ((g.getOrder() * ants[j].solution_value));
                     edge->setPheromone(pheromone);
                     if (!g.getDirected()) {
                         node = g.getNode(ants[j].tour.trips[i].path[k + 1]);
@@ -74,7 +74,7 @@ void aco(Graph &g, int cycles, float evaporation, float alpha, float beta) {
             }
         }
         // percorre o path da melhor solução e atualiza o feromônio dela com um valor maior do que das outras rotas
-        for(int k = 0; k < best.tour.trips.size(); k++){
+        for (int k = 0; k < best.tour.trips.size(); k++) {
             for (int i = 0; i < best.tour.trips[k].path.size() - 1; i++) {
                 Node *node = g.getNode(best.tour.trips[k].path[i]);
                 Edge *edge = node->getEdge(best.tour.trips[k].path[i + 1]);
@@ -154,12 +154,13 @@ selectNextNode(Ant &ant, Graph &g, float alpha, float beta, int trip, double max
     Edge *hotelEdge;
     // analisa todas das arestas do no atual
     while (edge != nullptr) {
-        Node *node = g.getNode(edge->getTargetId()); 
+        Node *node = g.getNode(edge->getTargetId());
         // se o nó destino da aresta não foi visitado, calculo a "qualidade" do mesmo e coloca no vector de qualidades
         if (!ant.tour.trips[trip].visited[node->getObjectId()]) {
-            quality = node->getWeight() / (edge->getWeight()+1);
-            qualities.push_back(quality); 
-            q += pow(edge->getPheromone(), alpha) * pow(quality, beta); // o q será usado para o calculo de prbabilidades de cada nó q possa ser escolhido
+            quality = node->getWeight() / (edge->getWeight() + 1);
+            qualities.push_back(quality);
+            q += pow(edge->getPheromone(), alpha) *
+                 pow(quality, beta); // o q será usado para o calculo de prbabilidades de cada nó q possa ser escolhido
             edges[n_edges] = edge;
             n_edges++;
         }
@@ -169,7 +170,8 @@ selectNextNode(Ant &ant, Graph &g, float alpha, float beta, int trip, double max
     vector<double> probabilities(n_edges, 0.0); // vector para armazenar as probabilidades
 
     for (int k = 0; k < n_edges; k++) {
-        probabilities[k] = (pow(edges[k]->getPheromone(), alpha) * pow(qualities[k], beta)) / q; // caclula as probabilidades baseado na qualidade
+        probabilities[k] = (pow(edges[k]->getPheromone(), alpha) * pow(qualities[k], beta)) /
+                           q; // caclula as probabilidades baseado na qualidade
     }
     // p será utilizado como margem para selecionar o nó conforme a probabilidade
     double p[probabilities.size()];
@@ -186,17 +188,23 @@ selectNextNode(Ant &ant, Graph &g, float alpha, float beta, int trip, double max
         // soma t até chegar no valor aleatório sorteado
         if (t >= r) {
             // se for a última trip, precisamos forçar que encerre  em h1
-            if(h1){
+            if (h1) {
                 Node *n1 = g.getNode(edges[i]->getTargetId());
                 Node *n2 = g.getNode(1);
                 hotelEdge = n1->getEdge(n2->getObjectId());
             }// senão, vamos encerrar no hotel mais próximo 
-            else{
+            else {
                 hotelEdge = closestHotel(g, g.getNode(edges[i]->getTargetId()));
             }
-            distance = sqrt((g.getNode(hotelEdge->getTargetId())->getX() - g.getNode(edges[i]->getTargetId())->getX()) * (g.getNode(hotelEdge->getTargetId())->getX() - g.getNode(edges[i]->getTargetId())->getX()) + (g.getNode(hotelEdge->getTargetId())->getY() - g.getNode(edges[i]->getTargetId())->getY()) * (g.getNode(hotelEdge->getTargetId())->getY() - g.getNode(edges[i]->getTargetId())->getY()));
+            distance = hotelEdge->getWeight();
+
+//            distance = sqrt((g.getNode(hotelEdge->getTargetId())->getX() - g.getNode(edges[i]->getTargetId())->getX()) *
+//                            (g.getNode(hotelEdge->getTargetId())->getX() - g.getNode(edges[i]->getTargetId())->getX()) +
+//                            (g.getNode(hotelEdge->getTargetId())->getY() - g.getNode(edges[i]->getTargetId())->getY()) *
+//                            (g.getNode(hotelEdge->getTargetId())->getY() - g.getNode(edges[i]->getTargetId())->getY()));
             // caso haja disponibilidade de tempo para ir ao próximo nó, e, dele, ir ao hotel mais próximo, então podemos ir ao nó
-            if(tripTime + edges[i]->getWeight() + distance < maxTripTime && g.getNode(edges[i]->getTargetId())->getType() == 'V'){
+            if (tripTime + edges[i]->getWeight() + distance < maxTripTime &&
+                g.getNode(edges[i]->getTargetId())->getType() == 'V') {
                 return edges[i];
             }
         }
@@ -205,18 +213,20 @@ selectNextNode(Ant &ant, Graph &g, float alpha, float beta, int trip, double max
 }
 
 // retorna o hotel mais próximo ao nó
-Edge *closestHotel(Graph &g, Node *current_node){ 
+Edge *closestHotel(Graph &g, Node *current_node) {
     Edge *edge = current_node->getFirstEdge();
     float closest = numeric_limits<float>::max();
     Edge *closestHotel;
     float distance;
     // analisa todas as arestas do no que possivelmente será escolhido
     // retorna o hotel mais próximo a esse nó
-    while(edge != nullptr){
+    while (edge != nullptr) {
         Node *node = g.getNode(edge->getTargetId());
-        // cálculo da distância 
-        distance = sqrt((current_node->getX() - node->getX()) * (current_node->getX() - node->getX()) + (current_node->getY() - node->getY()) * (current_node->getY() - node->getY()));
-        if(node->getType() == 'H' && distance < closest){
+        // cálculo da distância
+        distance = edge->getWeight();
+//        distance = sqrt((current_node->getX() - node->getX()) * (current_node->getX() - node->getX()) +
+//                        (current_node->getY() - node->getY()) * (current_node->getY() - node->getY()));
+        if (node->getType() == 'H' && distance < closest) {
             closest = distance;
             closestHotel = edge;
         }
