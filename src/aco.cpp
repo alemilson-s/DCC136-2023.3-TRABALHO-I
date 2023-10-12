@@ -12,7 +12,7 @@ using namespace std;
 void aco(Graph &g, int cycles, float evaporation, float alpha, float beta) {
     cout << "Construindo solução ACO..." << endl;
     Ant best;
-    int n_ants = g.getOrder() * 1 / 6;
+    int n_ants = g.getOrder() * 1 / 4;
     best.solution_value = 0;
     vector<Ant> ants(n_ants, Ant());
     initializeParameters(ants, g, 10);
@@ -46,8 +46,10 @@ void aco(Graph &g, int cycles, float evaporation, float alpha, float beta) {
                 tripTime = 0;
                 k++;
             }
-            if (ants[j].solution_value > best.solution_value)
+            ants[j] = localSearch(g, ants[j]);
+            if (ants[j].solution_value > best.solution_value) {
                 best = ants[j];
+            }
 //            cout << "Solução: " << best.solution_value << endl;
             cout << "Solução: " << ants[j].solution_value << endl;
             j++;
@@ -75,14 +77,14 @@ void aco(Graph &g, int cycles, float evaporation, float alpha, float beta) {
             }
         }
         // percorre o path da melhor solução e atualiza o feromônio dela com um valor maior do que das outras rotas
-        for (int k = 0; k < best.tour.trips.size(); k++) {
-            for (int i = 0; i < best.tour.trips[k].path.size() - 1; i++) {
-                Node *node = g.getNode(best.tour.trips[k].path[i]);
-                Edge *edge = node->getEdge(best.tour.trips[k].path[i + 1]);
-                double pheromone = (1 - evaporation) * edge->getPheromone() + evaporation * (best.solution_value);
-                edge->setPheromone(pheromone);
-            }
-        }
+//        for (int k = 0; k < best.tour.trips.size(); k++) {
+//            for (int i = 0; i < best.tour.trips[k].path.size() - 1; i++) {
+//                Node *node = g.getNode(best.tour.trips[k].path[i]);
+//                Edge *edge = node->getEdge(best.tour.trips[k].path[i + 1]);
+//                double pheromone = (1 - evaporation) * edge->getPheromone() + evaporation * (best.solution_value);
+//                edge->setPheromone(pheromone);
+//            }
+//        }
 //        cout << "próxima geração" << endl;
         t++;
     }
@@ -150,6 +152,15 @@ selectNextNode(Ant &ant, Graph &g, float alpha, float beta, int trip, double max
         ant.tour.trips[trip].path.push_back(current_node);
     } else
         current_node = ant.tour.trips[trip].path.back();
+
+    for (int i = 0; i < ant.tour.trips.size(); i++) {
+        for (int j = 0; j < ant.tour.trips[i].visited.size(); j++) {
+            if (ant.tour.trips[i].visited[j]) {
+                ant.tour.trips[trip].visited[j] = true;
+            }
+        }
+    }
+
 
     Edge *edge = g.getNode(current_node)->getFirstEdge();
     double q = 0;
@@ -246,45 +257,39 @@ Edge *closestHotel(Graph &g, Node *current_node) {
     return closestHotel;
 }
 
-
-bool isValid(Graph &g, Ant &ant){
-    vector<double> td = g.getTD();
-    for(int i=0; ant.tour.trips.size(); i++){
-        if(ant.tour.trips[i].tripTime > td[i]){
-            return false;
-        }
-    }
-    return true;
-}
-
-Ant localSearch(Graph &g, Ant &ant){
-    Ant auxAnt = ant;
+Ant localSearch(Graph &g, Ant &ant) {
     int aux;
     double newValue, newCost;
-    for(int i=0; auxAnt.tour.trips.size()-1; i++){
-        for(int j=1; auxAnt.tour.trips[i].path.size()-1; j++){
-            for(int l=i+1; auxAnt.tour.trips.size(); l++){
-                for(int k=1; auxAnt.tour.trips[l].path.size()-1; k++){
+    for (int i = 0; i < ant.tour.trips.size() - 1; i++) {
+        for (int j = 1; j < ant.tour.trips[i].path.size() - 1; j++) {
+            for (int l = i + 1; l < ant.tour.trips.size(); l++) {
+                for (int k = 1; k < ant.tour.trips[l].path.size() - 1; k++) {
                     aux = ant.tour.trips[i].path[j];
-                    auxAnt.tour.trips[i].path[j] = ant.tour.trips[l].path[k];
-                    auxAnt.tour.trips[l].path[k] = aux;
-
+                    ant.tour.trips[i].path[j] = ant.tour.trips[l].path[k];
+                    ant.tour.trips[l].path[k] = aux;
                     // verificando o valor da nova solução
-                    newValue = g.getNode(auxAnt.tour.trips[l].path[k])->getWeight() - g.getNode(aux)->getWeight();
+                    newValue = g.getNode(aux)->getWeight() - g.getNode(ant.tour.trips[i].path[j])->getWeight();
                     // verificando o custo da nova solução
-                    newCost = g.getNode(auxAnt.tour.trips[l].path[k-1])->getEdge(ant.tour.trips[l].path[k])->getWeight() + g.getNode(auxAnt.tour.trips[l].path[k+1])->getEdge(ant.tour.trips[l].path[k])->getWeight() - g.getNode(auxAnt.tour.trips[i].path[j-1])->getEdge(ant.tour.trips[i].path[j])->getWeight() - g.getNode(auxAnt.tour.trips[i].path[j+1])->getEdge(ant.tour.trips[i].path[j])->getWeight();
-                    
-                    auxAnt.solution_value += newValue;
-                    auxAnt.tour.trips[l].tripTime += newCost;
-                
-                    if(newValue > 0 && auxAnt.tour.trips[l].tripTime < g.getTD()[l]){ // significa que melhorou a solução e que é válida
-                        return auxAnt;
-                    }   
+                    newCost = g.getNode(ant.tour.trips[l].path[k - 1])->getEdge(
+                            ant.tour.trips[l].path[k])->getWeight() +
+                              g.getNode(ant.tour.trips[l].path[k + 1])->getEdge(
+                                      ant.tour.trips[l].path[k])->getWeight() -
+                              g.getNode(ant.tour.trips[i].path[j - 1])->getEdge(
+                                      ant.tour.trips[i].path[j])->getWeight() -
+                              g.getNode(ant.tour.trips[i].path[j + 1])->getEdge(
+                                      ant.tour.trips[i].path[j])->getWeight();
+
+                    if (newValue > 0 &&
+                        ant.tour.trips[l].tripTime < g.getTD()[l]) { // significa que melhorou a solução e que é válida
+                        ant.solution_value += newValue;
+                        ant.tour.trips[l].tripTime += newCost;
+                        return ant;
+                    }
 
                     // desfazer a troca caso não tenha sido bem sucedida
                     aux = ant.tour.trips[i].path[j];
-                    auxAnt.tour.trips[i].path[j] = ant.tour.trips[l].path[k];
-                    auxAnt.tour.trips[l].path[k] = aux;
+                    ant.tour.trips[i].path[j] = ant.tour.trips[l].path[k];
+                    ant.tour.trips[l].path[k] = aux;
                 }
             }
         }
