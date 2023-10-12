@@ -222,3 +222,9 @@ Edge *closestHotel(Graph &g, Node *current_node){
     }
     return closestHotel;
 }
+
+
+bool isValid(Graph &g, Ant &ant){
+    if
+}
+

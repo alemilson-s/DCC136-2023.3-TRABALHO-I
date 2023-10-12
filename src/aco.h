@@ -32,4 +32,6 @@ void aco(Graph &g, int cycles, float evaporation, float alpha, float beta);
 
 Edge *closestHotel(Graph &g, Node *current_node);
 
+bool isValid(Graph &g, Ant &ant);
+
 #endif //DCC067_ACO_ACO_H
