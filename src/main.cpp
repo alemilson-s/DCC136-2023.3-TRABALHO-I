@@ -25,13 +25,15 @@ Graph *leitura(ifstream &input_file) {
     g->setD(d);
     g->setN(n);
     g->setH(h);
-    double x, y, weight_node, t_max, x_t_d, y_t_d;
-    Td t_d;
+    double x, y, weight_node, t_max;
     input_file >> t_max;
     g->setTMax(t_max);
-    input_file >> x_t_d >> y_t_d;
-    t_d.x = x_t_d;
-    t_d.y = y_t_d;
+    vector<double> t_d;
+    for (int i = 0; i < d; i++) {
+        double value;
+        input_file >> value;
+        t_d.push_back(value);
+    }
     g->setTD(t_d);
     input_file >> x >> y >> weight_node;
     Node *node = g->allocateNode(id++);
@@ -93,6 +95,7 @@ int main(int argc, char **argv) {
         input_file.close();
     int cycles = 2000;
 
+//    g->print();
     aco(*g, cycles, 0.7, 1, 9);
     delete g;
     return 0;
