@@ -39,6 +39,7 @@ void aco(Graph &g, int cycles, float evaporation, float alpha, float beta) {
                     ants[j].tour.trips[k].visited[node->getObjectId()] = true;
                     ants[j].solution_value += node->getWeight();
                     tripTime += next_node->getWeight();
+                    ants[j].tour.trips[k].tripTime = tripTime;
                     if (node->getType() == 'E' || node->getType() == 'H')
                         break;
                 }
@@ -247,6 +248,46 @@ Edge *closestHotel(Graph &g, Node *current_node) {
 
 
 bool isValid(Graph &g, Ant &ant){
-    if
+    vector<double> td = g.getTD();
+    for(int i=0; ant.tour.trips.size(); i++){
+        if(ant.tour.trips[i].tripTime > td[i]){
+            return false;
+        }
+    }
+    return true;
 }
 
+Ant localSearch(Graph &g, Ant &ant){
+    Ant auxAnt = ant;
+    int aux;
+    double newValue, newCost;
+    for(int i=0; auxAnt.tour.trips.size()-1; i++){
+        for(int j=1; auxAnt.tour.trips[i].path.size()-1; j++){
+            for(int l=i+1; auxAnt.tour.trips.size(); l++){
+                for(int k=1; auxAnt.tour.trips[l].path.size()-1; k++){
+                    aux = ant.tour.trips[i].path[j];
+                    auxAnt.tour.trips[i].path[j] = ant.tour.trips[l].path[k];
+                    auxAnt.tour.trips[l].path[k] = aux;
+
+                    // verificando o valor da nova solução
+                    newValue = g.getNode(auxAnt.tour.trips[l].path[k])->getWeight() - g.getNode(aux)->getWeight();
+                    // verificando o custo da nova solução
+                    newCost = g.getNode(auxAnt.tour.trips[l].path[k-1])->getEdge(ant.tour.trips[l].path[k])->getWeight() + g.getNode(auxAnt.tour.trips[l].path[k+1])->getEdge(ant.tour.trips[l].path[k])->getWeight() - g.getNode(auxAnt.tour.trips[i].path[j-1])->getEdge(ant.tour.trips[i].path[j])->getWeight() - g.getNode(auxAnt.tour.trips[i].path[j+1])->getEdge(ant.tour.trips[i].path[j])->getWeight();
+                    
+                    auxAnt.solution_value += newValue;
+                    auxAnt.tour.trips[l].tripTime += newCost;
+                
+                    if(newValue > 0 && auxAnt.tour.trips[l].tripTime < g.getTD()[l]){ // significa que melhorou a solução e que é válida
+                        return auxAnt;
+                    }   
+
+                    // desfazer a troca caso não tenha sido bem sucedida
+                    aux = ant.tour.trips[i].path[j];
+                    auxAnt.tour.trips[i].path[j] = ant.tour.trips[l].path[k];
+                    auxAnt.tour.trips[l].path[k] = aux;
+                }
+            }
+        }
+    }
+    return ant;
+}
