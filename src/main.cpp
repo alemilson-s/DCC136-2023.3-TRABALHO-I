@@ -6,6 +6,7 @@
 #include <vector>
 #include <cmath>
 #include "aco.h"
+#include <chrono>
 
 using namespace std;
 
@@ -93,11 +94,15 @@ int main(int argc, char **argv) {
 
     if (input_file.is_open())
         input_file.close();
-    int cycles = 2000;
+    int cycles = 100;
 
 //    g->print();
+    auto start_time = std::chrono::high_resolution_clock::now();
     aco(*g, cycles, 0.7, 1, 9);
+    auto end_time = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::seconds>(end_time - start_time);
     delete g;
+    std::cout << "Tempo de execução: " << duration.count() << " segundos" << std::endl;
     return 0;
 
 }

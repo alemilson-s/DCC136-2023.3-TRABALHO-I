@@ -17,7 +17,7 @@ void aco(Graph &g, int cycles, float evaporation, float alpha, float beta) {
     vector<Ant> ants(n_ants, Ant());
     initializeParameters(ants, g, 10);
     int t = 0;
-    bool h1;
+    bool h1, penultimate;
 
     double maxTripTime;
     double tripTime;
@@ -25,18 +25,24 @@ void aco(Graph &g, int cycles, float evaporation, float alpha, float beta) {
         initializeAnts(g, ants, g.getOrder());
         int j = 0;
         while (j < n_ants) {
-            h1 = false;
+            h1 = penultimate = false;
             int k = 0;
             tripTime = ants[j].inicialTime;
             while (k < g.getD()) {
                 maxTripTime = g.getTD()[k];
                 if (k == g.getD() - 1)
                     h1 = true;
+                if (k == g.getD() - 2)
+                    penultimate = true;
                 while (tripTime <= maxTripTime) {
-                    Edge *next_node = selectNextNode(ants[j], g, alpha, beta, k, maxTripTime, tripTime, h1);
+                    Edge *next_node = selectNextNode(ants[j], g, alpha, beta, k, maxTripTime, tripTime, h1,
+                                                     penultimate);
                     Node *node = g.getNode(next_node->getTargetId());
                     ants[j].tour.trips[k].path.push_back(node->getObjectId());
                     ants[j].tour.trips[k].visited[node->getObjectId()] = true;
+                    for (int l = 0; l < ants[j].tour.trips.size(); l++) {
+                        ants[j].tour.trips[l].visited[node->getObjectId()] = true;
+                    }
                     ants[j].solution_value += node->getWeight();
                     tripTime += next_node->getWeight();
                     ants[j].tour.trips[k].tripTime = tripTime;
@@ -46,12 +52,15 @@ void aco(Graph &g, int cycles, float evaporation, float alpha, float beta) {
                 tripTime = 0;
                 k++;
             }
-            ants[j] = localSearch(g, ants[j]);
-            if (ants[j].solution_value > best.solution_value) {
-                best = ants[j];
+            ants[j] = vnd(g, ants[j]);
+            if (isValid(g, ants[j])) {
+                if (ants[j].solution_value > best.solution_value) {
+                    best = ants[j];
+                }
+//
             }
 //            cout << "Solução: " << best.solution_value << endl;
-            cout << "Solução: " << ants[j].solution_value << endl;
+//            cout << "Solução: " << ants[j].solution_value << endl;
             j++;
         }
 
@@ -77,25 +86,19 @@ void aco(Graph &g, int cycles, float evaporation, float alpha, float beta) {
             }
         }
         // percorre o path da melhor solução e atualiza o feromônio dela com um valor maior do que das outras rotas
-//        for (int k = 0; k < best.tour.trips.size(); k++) {
-//            for (int i = 0; i < best.tour.trips[k].path.size() - 1; i++) {
-//                Node *node = g.getNode(best.tour.trips[k].path[i]);
-//                Edge *edge = node->getEdge(best.tour.trips[k].path[i + 1]);
-//                double pheromone = (1 - evaporation) * edge->getPheromone() + evaporation * (best.solution_value);
-//                edge->setPheromone(pheromone);
-//            }
-//        }
+        for (int k = 0; k < best.tour.trips.size(); k++) {
+            for (int i = 0; i < best.tour.trips[k].path.size() - 1; i++) {
+                Node *node = g.getNode(best.tour.trips[k].path[i]);
+                Edge *edge = node->getEdge(best.tour.trips[k].path[i + 1]);
+                double pheromone = (1 - evaporation) * edge->getPheromone() + evaporation * (best.solution_value);
+                edge->setPheromone(pheromone);
+            }
+        }
 //        cout << "próxima geração" << endl;
         t++;
     }
     // imprime a solução
-    cout << "Solução:" << endl;
-    for (int k = 0; k < best.tour.trips.size(); k++) {
-        for (int i = 0; i < best.tour.trips[k].path.size() - 1; i++) {
-            cout << '\t' << '(' << best.tour.trips[k].path[i] << ", " << best.tour.trips[k].path[i + 1] << ')' << endl;
-        }
-    }
-    cout << "Valor da solução: " << best.solution_value << endl;
+    cout << best.solution_value << endl;
 }
 
 void initializeAnts(Graph &g, vector<Ant> &ants, int n) {
@@ -113,7 +116,6 @@ void initializeAnts(Graph &g, vector<Ant> &ants, int n) {
         ants[i].tour.trips[0].path.push_back(0);
         for (int j = 0; j < g.getD(); j++) {
             ants[i].tour.trips[j].visited.resize(g.getOrder(), false);
-            ants[i].tour.trips[j].visited[1] = true;
         }
         ants[i].tour.trips[0].visited[0] = true;
         int aleatory_number = dis(rd);
@@ -142,10 +144,11 @@ void initializeParameters(vector<Ant> &ants, Graph &g, float pheromone) {
 }
 
 Edge *
-selectNextNode(Ant &ant, Graph &g, float alpha, float beta, int trip, double maxTripTime, double tripTime, bool h1) {
+selectNextNode(Ant &ant, Graph &g, float alpha, float beta, int trip, double maxTripTime, double tripTime, bool h1,
+               bool penultimate) {
     Edge *edges[g.getOrder()];
     int n_edges = 0, current_node;
-    if (trip == 0 && ant.tour.trips[trip].path.size() == 1)
+    if (trip == 0 && ant.tour.trips[trip].path.size() == 2)
         current_node = ant.tour.trips[trip].path.back();
     else if (ant.tour.trips[trip].path.size() == 0) {
         current_node = ant.tour.trips[trip - 1].path.back();
@@ -209,7 +212,7 @@ selectNextNode(Ant &ant, Graph &g, float alpha, float beta, int trip, double max
                 hotelEdge = n1->getEdge(n2->getObjectId());
             }// senão, vamos encerrar no hotel mais próximo 
             else {
-                hotelEdge = closestHotel(g, g.getNode(edges[i]->getTargetId()));
+                hotelEdge = closestHotel(g, g.getNode(edges[i]->getTargetId()), penultimate);
             }
             distance = hotelEdge->getWeight();
 
@@ -231,58 +234,75 @@ selectNextNode(Ant &ant, Graph &g, float alpha, float beta, int trip, double max
         return edge_h1;
     }
     // c_node é hotel dando problema!
-    return closestHotel(g, c_node);
+    return closestHotel(g, c_node, penultimate);
 }
 
 // retorna o hotel mais próximo ao nó
-Edge *closestHotel(Graph &g, Node *current_node) {
+Edge *closestHotel(Graph &g, Node *current_node, bool penultimate) {
     Edge *edge = current_node->getFirstEdge();
+    Node *node = g.getFirstNode();
     float closest = numeric_limits<float>::max();
     Edge *closestHotel = nullptr;
-    float distance;
+    float distance, distanceH1 = 0;
     // analisa todas as arestas do no que possivelmente será escolhido
     // retorna o hotel mais próximo a esse nó
-    while (edge != nullptr) {
-        Node *node = g.getNode(edge->getTargetId());
+    while (edge != nullptr && node->getType() != 'V') {
+        node = g.getNode(edge->getTargetId());
         // cálculo da distância
         distance = edge->getWeight();
+        if (penultimate) {
+            if (edge->getTargetId() == 1) {
+                edge = edge->getNextEdge();
+                continue;
+            }
+            distanceH1 = node->getEdge(1)->getWeight();
+        }
 //        distance = sqrt((current_node->getX() - node->getX()) * (current_node->getX() - node->getX()) +
 //                        (current_node->getY() - node->getY()) * (current_node->getY() - node->getY()));
-        if (node->getType() == 'H' && distance < closest) {
+        if (node->getType() == 'H' && distance < closest && distanceH1 <= g.getTD().back()) {
             closest = distance;
             closestHotel = edge;
         }
         edge = edge->getNextEdge();
     }
+//    cout << closestHotel->getTargetId() << endl;
     return closestHotel;
 }
 
-Ant localSearch(Graph &g, Ant &ant) {
+Ant firstLocalSearch(Graph &g, Ant &ant) {
     int aux;
-    double newValue, newCost;
+    double costTarget;
+    double costOrigin;
     for (int i = 0; i < ant.tour.trips.size() - 1; i++) {
         for (int j = 1; j < ant.tour.trips[i].path.size() - 1; j++) {
             for (int l = i + 1; l < ant.tour.trips.size(); l++) {
                 for (int k = 1; k < ant.tour.trips[l].path.size() - 1; k++) {
+                    costOrigin = ant.tour.trips[i].tripTime + ant.tour.trips[l].tripTime;
                     aux = ant.tour.trips[i].path[j];
                     ant.tour.trips[i].path[j] = ant.tour.trips[l].path[k];
                     ant.tour.trips[l].path[k] = aux;
-                    // verificando o valor da nova solução
-                    newValue = g.getNode(aux)->getWeight() - g.getNode(ant.tour.trips[i].path[j])->getWeight();
                     // verificando o custo da nova solução
-                    newCost = g.getNode(ant.tour.trips[l].path[k - 1])->getEdge(
-                            ant.tour.trips[l].path[k])->getWeight() +
-                              g.getNode(ant.tour.trips[l].path[k + 1])->getEdge(
-                                      ant.tour.trips[l].path[k])->getWeight() -
-                              g.getNode(ant.tour.trips[i].path[j - 1])->getEdge(
-                                      ant.tour.trips[i].path[j])->getWeight() -
-                              g.getNode(ant.tour.trips[i].path[j + 1])->getEdge(
-                                      ant.tour.trips[i].path[j])->getWeight();
+                    double removedCostA =
+                            -g.getNode(ant.tour.trips[i].path[j - 1])->getEdge(ant.tour.trips[i].path[j])->getWeight() -
+                            g.getNode(ant.tour.trips[i].path[j + 1])->getEdge(ant.tour.trips[i].path[j])->getWeight();
+                    double removedCostB =
+                            -g.getNode(ant.tour.trips[l].path[k - 1])->getEdge(ant.tour.trips[l].path[k])->getWeight() -
+                            g.getNode(ant.tour.trips[l].path[k + 1])->getEdge(ant.tour.trips[l].path[k])->getWeight();
+                    double addedCostA =
+                            g.getNode(ant.tour.trips[i].path[j - 1])->getEdge(ant.tour.trips[l].path[k])->getWeight() +
+                            g.getNode(ant.tour.trips[i].path[j + 1])->getEdge(ant.tour.trips[l].path[k])->getWeight();
+                    double addedCostB =
+                            g.getNode(ant.tour.trips[l].path[k - 1])->getEdge(ant.tour.trips[i].path[j])->getWeight() +
+                            g.getNode(ant.tour.trips[l].path[k + 1])->getEdge(ant.tour.trips[i].path[j])->getWeight();
 
-                    if (newValue > 0 &&
-                        ant.tour.trips[l].tripTime < g.getTD()[l]) { // significa que melhorou a solução e que é válida
-                        ant.solution_value += newValue;
-                        ant.tour.trips[l].tripTime += newCost;
+                    costTarget = costOrigin + removedCostA + removedCostB + addedCostA + addedCostB;
+
+
+                    if (ant.tour.trips[l].tripTime + removedCostB + addedCostB < g.getTD()[l] &&
+                        ant.tour.trips[i].tripTime + removedCostA + addedCostA < g.getTD()[i] &&
+                        costTarget < costOrigin) { // significa que melhorou a solução e que é válida
+                        ant.tour.trips[l].tripTime += removedCostB + addedCostB;
+                        ant.tour.trips[i].tripTime += removedCostA + addedCostA;
                         return ant;
                     }
 
@@ -295,4 +315,66 @@ Ant localSearch(Graph &g, Ant &ant) {
         }
     }
     return ant;
+}
+
+bool tryInsertNodeIntoTrip(int id_node, int index_node, int index_trip, Trip &trip, Graph &g) {
+    Node *current_node = g.getNode(id_node);
+    Node *previous_node = g.getNode(trip.path[index_node - 1]);
+    Node *next_node = next_node = g.getNode(trip.path[index_node]);
+    double addedCost = previous_node->getEdge(id_node)->getWeight() +
+                       current_node->getEdge(next_node->getId())->getWeight();
+
+    if (trip.tripTime + addedCost < g.getTD()[index_trip]) {
+        vector<int>::iterator it = trip.path.begin() + index_node;
+        trip.path.insert(it, id_node);
+        trip.visited[id_node] = true;
+        trip.tripTime += addedCost;
+    }
+    return trip.visited[id_node];
+}
+
+Ant secondLocalSearch(Graph &g, Ant &ant) {
+    for (int i = 0; i < ant.tour.trips.size(); i++) {
+        for (int j = g.getH() + 2; j < ant.tour.trips[i].visited.size() - 1; j++) {
+            if (!ant.tour.trips[i].visited[j]) {
+                for (int k = 1; k < ant.tour.trips[i].path.size(); k++) {
+                    if (tryInsertNodeIntoTrip(j, k, i, ant.tour.trips[i], g)) {
+                        for (int l = 0; l < ant.tour.trips.size(); l++) {
+                            ant.tour.trips[l].visited[j] = true;
+                        }
+                        ant.solution_value += g.getNode(j)->getWeight();
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    return ant;
+}
+
+Ant vnd(Graph &g, Ant &ant) {
+    Ant s = ant;
+    int k = 0;
+    while (k < 2) {
+        if (k == 0) {
+            s = firstLocalSearch(g, s);
+        } else {
+            s = secondLocalSearch(g, s);
+        }
+        if (s.solution_value > ant.solution_value) {
+            ant = s;
+            k = 0;
+        } else {
+            k++;
+        }
+    }
+    return ant;
+}
+
+bool isValid(Graph &g, Ant ant) {
+    for (int i = 0; i < ant.tour.trips.size(); i++) {
+        if (ant.tour.trips[i].tripTime > g.getTD()[i])
+            return false;
+    }
+    return true;
 }
