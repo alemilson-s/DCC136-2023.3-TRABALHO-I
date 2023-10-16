@@ -98,7 +98,25 @@ void aco(Graph &g, int cycles, float evaporation, float alpha, float beta) {
         t++;
     }
     // imprime a solução
-    cout << best.solution_value << endl;
+    cout << "Solução:" << endl;
+    for (int i = 0; i < best.tour.trips.size(); i++) {
+        cout << "trip - " << i << endl;
+        float s = 0;
+        for (int j = 0; j < best.tour.trips[i].path.size() - 1; j++) {
+            Node *n1, *n2;
+            n1 = g.getNode(best.tour.trips[i].path[j]);
+            n2 = g.getNode(best.tour.trips[i].path[j + 1]);
+            Edge *e = n1->getEdge(n2->getObjectId());
+            cout << '\t' << '(' << best.tour.trips[i].path[j] << ", " << best.tour.trips[i].path[j + 1] << ')'
+                 << e->getWeight() << endl;
+            s += e->getWeight();
+        }
+        cout << "trip_time: " << best.tour.trips[i].tripTime << endl << endl;
+        cout << "somatorio de peso das arestas da trip: " << i << " " << s << endl;
+    }
+
+    cout << "Valor da solução: " << best.solution_value << endl;
+//    o_file << best.solution_value << "\n";
 }
 
 void initializeAnts(Graph &g, vector<Ant> &ants, int n) {
@@ -281,12 +299,31 @@ Ant firstLocalSearch(Graph &g, Ant &ant) {
                     aux = ant.tour.trips[i].path[j];
                     ant.tour.trips[i].path[j] = ant.tour.trips[l].path[k];
                     ant.tour.trips[l].path[k] = aux;
+                    float s = 0;
+                    Node *n = g.getFirstNode();
+                    Edge *e;
+                    for (int a = 0; a < 1; a++) {
+                        for (int b = 1; b < ant.tour.trips[a].path.size() - 1; b++) {
+                            e = n->getEdge(ant.tour.trips[a].path[b]);
+                            s += e->getWeight();
+                            n = g.getNode(ant.tour.trips[a].path[b]);
+                        }
+                    }
+                    float t = 0;
+                    n = g.getNode(ant.tour.trips[0].path.back());
+                    for (int a = 1; a < 2; a++) {
+                        for (int b = 1; b < ant.tour.trips[a].path.size() - 1; b++) {
+                            e = n->getEdge(ant.tour.trips[a].path[b]);
+                            t += e->getWeight();
+                            n = g.getNode(ant.tour.trips[a].path[b]);
+                        }
+                    }
                     // verificando o custo da nova solução
                     double removedCostA =
-                            -g.getNode(ant.tour.trips[i].path[j - 1])->getEdge(ant.tour.trips[i].path[j])->getWeight() -
+                            g.getNode(ant.tour.trips[i].path[j - 1])->getEdge(ant.tour.trips[i].path[j])->getWeight() +
                             g.getNode(ant.tour.trips[i].path[j + 1])->getEdge(ant.tour.trips[i].path[j])->getWeight();
                     double removedCostB =
-                            -g.getNode(ant.tour.trips[l].path[k - 1])->getEdge(ant.tour.trips[l].path[k])->getWeight() -
+                            g.getNode(ant.tour.trips[l].path[k - 1])->getEdge(ant.tour.trips[l].path[k])->getWeight() +
                             g.getNode(ant.tour.trips[l].path[k + 1])->getEdge(ant.tour.trips[l].path[k])->getWeight();
                     double addedCostA =
                             g.getNode(ant.tour.trips[i].path[j - 1])->getEdge(ant.tour.trips[l].path[k])->getWeight() +
@@ -295,14 +332,12 @@ Ant firstLocalSearch(Graph &g, Ant &ant) {
                             g.getNode(ant.tour.trips[l].path[k - 1])->getEdge(ant.tour.trips[i].path[j])->getWeight() +
                             g.getNode(ant.tour.trips[l].path[k + 1])->getEdge(ant.tour.trips[i].path[j])->getWeight();
 
-                    costTarget = costOrigin + removedCostA + removedCostB + addedCostA + addedCostB;
-
-
-                    if (ant.tour.trips[l].tripTime + removedCostB + addedCostB < g.getTD()[l] &&
-                        ant.tour.trips[i].tripTime + removedCostA + addedCostA < g.getTD()[i] &&
-                        costTarget < costOrigin) { // significa que melhorou a solução e que é válida
-                        ant.tour.trips[l].tripTime += removedCostB + addedCostB;
-                        ant.tour.trips[i].tripTime += removedCostA + addedCostA;
+                    costTarget = costOrigin - (removedCostA + removedCostB) + addedCostA + addedCostB;
+                    if (s < g.getTD()[l] &&
+                        t < g.getTD()[i] &&
+                        s + t < costOrigin) { // significa que melhorou a solução e que é válida
+                        ant.tour.trips[l].tripTime += addedCostB - removedCostB;
+                        ant.tour.trips[i].tripTime += addedCostA - removedCostA;
                         return ant;
                     }
 

@@ -79,30 +79,38 @@ Graph *leitura(ifstream &input_file) {
 }
 
 int main(int argc, char **argv) {
-    if (argc != 2 && argc != 1) {
+    if (argc != 2 && argc != 1 && argc != 4) {
         cout << "ERROR: Expecting: ./<program_name> <input_file>" << endl;
         cout << argv[1] << endl;
         cout << "Passar arquivo de entrada como parâmertro!" << endl;
         return -1;
     }
     string file_name = argv[1];
+//    string file = argv[2];
+//    string file_time = argv[3];
 
     ifstream input_file;
     input_file.open(file_name, ios::in);
+//    ofstream o_file, o_file_time;
+//    o_file.open(file, ios::app);
+//    o_file_time.open(file_time, ios::app);
 
     Graph *g = leitura(input_file);
 
     if (input_file.is_open())
         input_file.close();
-    int cycles = 100;
+    int cycles = 500;
 
 //    g->print();
     auto start_time = std::chrono::high_resolution_clock::now();
     aco(*g, cycles, 0.7, 1, 9);
     auto end_time = std::chrono::high_resolution_clock::now();
     auto duration = std::chrono::duration_cast<std::chrono::seconds>(end_time - start_time);
+    cout << "Tempo: " << duration.count() << " segundos" << endl;
     delete g;
-    std::cout << "Tempo de execução: " << duration.count() << " segundos" << std::endl;
+//    o_file_time << duration.count() << "\n";
+//    o_file_time.close();
+//    o_file.close();
     return 0;
 
 }
