@@ -37,6 +37,10 @@ void aco(Graph &g, int cycles, float evaporation, float alpha, float beta) {
                 while (tripTime <= maxTripTime) {
                     Edge *next_node = selectNextNode(ants[j], g, alpha, beta, k, maxTripTime, tripTime, h1,
                                                      penultimate);
+                    if (next_node == nullptr) {
+                        cout << "Não foi possível construir uma solução!" << endl;
+                        return;
+                    }
                     Node *node = g.getNode(next_node->getTargetId());
                     ants[j].tour.trips[k].path.push_back(node->getObjectId());
                     ants[j].tour.trips[k].visited[node->getObjectId()] = true;
@@ -101,18 +105,19 @@ void aco(Graph &g, int cycles, float evaporation, float alpha, float beta) {
     cout << "Solução:" << endl;
     for (int i = 0; i < best.tour.trips.size(); i++) {
         cout << "trip - " << i << endl;
-        float s = 0;
+        double s = 0;
         for (int j = 0; j < best.tour.trips[i].path.size() - 1; j++) {
             Node *n1, *n2;
             n1 = g.getNode(best.tour.trips[i].path[j]);
             n2 = g.getNode(best.tour.trips[i].path[j + 1]);
             Edge *e = n1->getEdge(n2->getObjectId());
-            cout << '\t' << '(' << best.tour.trips[i].path[j] << ", " << best.tour.trips[i].path[j + 1] << ')'
-                 << e->getWeight() << endl;
+            cout << '\t' << '(' << best.tour.trips[i].path[j] << ", " << best.tour.trips[i].path[j + 1] << ')' << endl;
             s += e->getWeight();
         }
-        cout << "trip_time: " << best.tour.trips[i].tripTime << endl << endl;
-        cout << "somatorio de peso das arestas da trip: " << i << " " << s << endl;
+        if (best.tour.trips[i].tripTime != s) {
+            cout << "Violação da solução!" << endl;
+            return;
+        }
     }
 
     cout << "Valor da solução: " << best.solution_value << endl;

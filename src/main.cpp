@@ -99,7 +99,7 @@ int main(int argc, char **argv) {
 
     if (input_file.is_open())
         input_file.close();
-    int cycles = 500;
+    int cycles = 100;
 
 //    g->print();
     auto start_time = std::chrono::high_resolution_clock::now();
