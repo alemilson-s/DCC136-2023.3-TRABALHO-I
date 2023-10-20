@@ -6,6 +6,7 @@
 #include <vector>
 #include <cmath>
 #include "aco.h"
+#include <chrono>
 
 using namespace std;
 
@@ -25,13 +26,15 @@ Graph *leitura(ifstream &input_file) {
     g->setD(d);
     g->setN(n);
     g->setH(h);
-    double x, y, weight_node, t_max, x_t_d, y_t_d;
-    Td t_d;
+    double x, y, weight_node, t_max;
     input_file >> t_max;
     g->setTMax(t_max);
-    input_file >> x_t_d >> y_t_d;
-    t_d.x = x_t_d;
-    t_d.y = y_t_d;
+    vector<double> t_d;
+    for (int i = 0; i < d; i++) {
+        double value;
+        input_file >> value;
+        t_d.push_back(value);
+    }
     g->setTD(t_d);
     input_file >> x >> y >> weight_node;
     Node *node = g->allocateNode(id++);
@@ -76,27 +79,38 @@ Graph *leitura(ifstream &input_file) {
 }
 
 int main(int argc, char **argv) {
-    if (argc != 2 && argc != 1) {
+    if (argc != 2 && argc != 1 && argc != 4) {
         cout << "ERROR: Expecting: ./<program_name> <input_file>" << endl;
         cout << argv[1] << endl;
         cout << "Passar arquivo de entrada como parâmertro!" << endl;
         return -1;
     }
     string file_name = argv[1];
+//    string file = argv[2];
+//    string file_time = argv[3];
 
     ifstream input_file;
     input_file.open(file_name, ios::in);
+//    ofstream o_file, o_file_time;
+//    o_file.open(file, ios::app);
+//    o_file_time.open(file_time, ios::app);
 
     Graph *g = leitura(input_file);
 
     if (input_file.is_open())
         input_file.close();
-    int cycles = 20000;
-    if (g->getOrder() >= 50)
-        cycles = 70000;
+    int cycles = 100;
 
+//    g->print();
+    auto start_time = std::chrono::high_resolution_clock::now();
     aco(*g, cycles, 0.7, 1, 9);
+    auto end_time = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::seconds>(end_time - start_time);
+    cout << "Tempo: " << duration.count() << " segundos" << endl;
     delete g;
+//    o_file_time << duration.count() << "\n";
+//    o_file_time.close();
+//    o_file.close();
     return 0;
 
 }
